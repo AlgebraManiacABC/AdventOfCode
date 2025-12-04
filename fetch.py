@@ -8,7 +8,6 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
 C_TEMPLATE ='''\
-#include <stdio.h>
 #include "../../aoc.h"
 
 int main(int argc, char * argv[])
@@ -36,4 +35,6 @@ if __name__ == '__main__':
                      get_data(day=day,year=year))
 
     # Also prepare day.c
-    Path.write_text(Path(f"./{year}/{day}/{day}.c"),C_TEMPLATE)
+    template = Path(f"./{year}/{day}/{day}.c")
+    if not template.exists():
+        Path.write_text(Path(f"./{year}/{day}/{day}.c"),C_TEMPLATE)

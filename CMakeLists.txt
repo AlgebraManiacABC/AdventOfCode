@@ -13,6 +13,11 @@ foreach(year_dir ${YEAR_DIRS})
                 get_filename_component(day_name "${day_dir}" NAME)
                 file(GLOB SRCS "${day_dir}/*.c")
                 add_executable(${year_name}_${day_name} ${SRCS} aoc.c aoc.h)
+                # Place executable in the day's folder
+                set_target_properties(${year_name}_${day_name} PROPERTIES
+                        RUNTIME_OUTPUT_DIRECTORY "${day_dir}"
+                        VS_DEBUGGER_WORKING_DIRECTORY "${day_dir}"
+                )
             endif()
         endforeach()
     endif()
