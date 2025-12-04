@@ -5,6 +5,44 @@
 #include "aoc.h"
 #include <string.h>
 
+void setLineCount(input_t * input)
+{
+    input->row_count = 0;
+    for (size_t i = 0; i < input->len; i++)
+    {
+        if (input->txt[i] == '\n') input->row_count++;
+    }
+    input->row_count++;
+}
+
+void setRows(input_t * input)
+{
+    if (input->col_count == 0)
+    {
+        fprintf(stderr, "Could not set rows, since col_count == 0\n");
+        return;
+    }
+
+    input->rows = malloc(input->row_count * sizeof(char *));
+    if (!input->rows) goto err_mem_rows;
+    char * current = input->txt;
+    for (size_t i = 0; i < input->row_count; i++)
+    {
+        input->rows[i] = calloc(input->col_count + 1, sizeof(char));
+        if (!input->rows[i]) goto err_mem_rowsi;
+        memcpy(input->rows[i], current, input->col_count);
+        current += input->col_count + 1;
+    }
+    return;
+err_mem_rows:
+    fprintf(stderr, "Not enough memory to allocate input->rows!\n");
+    input->col_count = 0;
+    return;
+err_mem_rowsi:
+    fprintf(stderr, "Not enough memory to allocate input->rows[i]!\n");
+    input->col_count = 0;
+}
+
 input_t * openInput()
 {
     input_t * input = malloc(sizeof(struct input_s));
@@ -25,6 +63,28 @@ input_t * openInput()
     // Shrink the memory back down
     input->txt = realloc(input->txt, sizeof(char) * (input->len+1));
 
+    setLineCount(input);
+    if (input->row_count >= 2)
+    {
+        char * temp = strchr(input->txt,'\n');
+        char * temp2 = strchr(temp+1,'\n');
+        if (temp2 - temp == temp - input->txt + 1)
+        {
+            input->col_count = temp2 - temp - 1;
+        }
+        else
+        {
+            input->col_count = 0;
+        }
+    }
+    else
+    {
+        input->col_count = 0;
+    }
+
+    setRows(input);
+    input->cols = NULL;
+
     return input;
 
 err_alloc:
@@ -38,6 +98,11 @@ err_file:
 err_size:
     fprintf(stderr, "File size issue (%lld != %lld)!\n",strlen(input->txt),input->len);
     return NULL;
+}
+
+size_t getLineCount(input_t * input)
+{
+    return input->row_count;
 }
 
 void forEachLine(const input_t * input, void (*func)(char*, size_t))
@@ -98,6 +163,17 @@ void enumerateForEachChar(const input_t * input, void (*func)(size_t, char))
     }
 }
 
+void enumerateForEachCharInTable(const input_t * input, void (*func)(size_t, size_t, char))
+{
+    for (size_t i=0; i<input->row_count; i++)
+    {
+        for (size_t j=0; j<input->col_count; j++)
+        {
+            func(i,j,input->rows[i][j]);
+        }
+    }
+}
+
 void print1dFloatArrayAsTable(const float * arr, size_t rows, size_t cols)
 {
     if(!arr) return;
@@ -122,4 +198,43 @@ void print1dIntArrayAsTable(const int *arr, size_t rows, size_t cols)
             printf("%df%s",*(arr+c+(cols*r)),(c==cols-1?"\n":", "));
         }
     }
+}
+
+int countAdjacentChar(const input_t * input, size_t row, size_t col, char c)
+{
+    if (input->col_count == 0)
+    {
+        fprintf(stderr,"Couldn't get adjacent chars due to column width being 0.\n");
+        return -1;
+    }
+    if (col >= input->col_count || row >= input->row_count)
+    {
+        fprintf(stderr,"Couldn't get adjacent chars: index OOB.\n");
+        return -1;
+    }
+    int count = 0;
+    // Count left
+    if (col > 0)
+    {
+        // Top-left
+        if (row > 0 && input->rows[row-1][col-1] == c) count++;
+        // Left
+        if (input->rows[row][col-1] == c) count++;
+        // Bottom-left
+        if (row < input->row_count - 1 && input->rows[row+1][col-1] == c) count++;
+    }
+    // Top
+    if (row > 0 && input->rows[row-1][col] == c) count++;
+    // Bottom
+    if (row < input->row_count - 1 && input->rows[row+1][col] == c) count++;
+    if (col < input->col_count - 1)
+    {
+        // Top-right
+        if (row > 0 && input->rows[row-1][col+1] == c) count++;
+        // Right
+        if (input->rows[row][col+1] == c) count++;
+        // Bottom-right
+        if (row < input->row_count - 1 && input->rows[row+1][col+1] == c) count++;
+    }
+    return count;
 }
